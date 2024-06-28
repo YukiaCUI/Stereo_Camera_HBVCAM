@@ -108,7 +108,7 @@ int main() {
     fs.release();
     
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(2);
+    VideoCapture cap(0);
 
     if (!cap.isOpened()) {
         cerr << "无法打开摄像头" << endl;
@@ -269,18 +269,24 @@ int main() {
         */
         // 提取深度信息并归一化
         
-        cv::Mat depth_map_3D, disparity_float;
-        disparity.convertTo(disparity_float, CV_32F, 1.0/16.0);
-        cv::reprojectImageTo3D(disparity, depth_map_3D, Q, true);
+        cv::Mat depth_map_3D, disparity_8U;
+        disparity.convertTo(disparity_8U, CV_8U, 1.0/8.0);
+        cv::reprojectImageTo3D(disparity_8U, depth_map_3D, Q, true);
 
         std::vector<cv::Mat> channels(3);
         cv::split(depth_map_3D, channels);
         cv::Mat depth = channels[2];
 
+        depth.setTo(0, depth < 0);
+        double actualMinVal, actualMaxVal;
+        cv::minMaxLoc(depth, &actualMinVal, &actualMaxVal);
+        std::cout << "Depth map actual min value: " << actualMinVal << " max value: " << actualMaxVal << std::endl;
+
+
         cv::Mat depth_normalized;
         cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         
-        imshow("depth_normalized",depth_normalized);
+        imshow("depth_normalized",depth);
 
         if(waitKey(15) >= 0)
         {
