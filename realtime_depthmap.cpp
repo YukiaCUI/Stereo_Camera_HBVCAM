@@ -76,14 +76,14 @@ int main() {
     Mat R1, R2, P1, P2, Q;
     stereoRectify(cameraMatrixL, distCoeffsL,
                     cameraMatrixR, distCoeffsR,
-                    imageSize, R, T, R1, R2, P1, P2, Q,
+                    imageSize, R, -T, R1, R2, P1, P2, Q,
                     CALIB_ZERO_DISPARITY, 0);  // alpha = 0
 
-    // cout << "R1: " << R1 << endl;
-    // cout << "R2: " << R2 << endl;
-    // cout << "P1: " << P1 << endl;
-    // cout << "P2: " << P2 << endl;
-    // cout << "Q: " << Q << endl;cv
+    cout << "R1: " << R1 << endl;
+    cout << "R2: " << R2 << endl;
+    cout << "P1: " << P1 << endl;
+    cout << "P2: " << P2 << endl;
+    cout << "Q: " << Q << endl;
 
     while (true) {
         Mat frame;
@@ -178,7 +178,40 @@ int main() {
         // 绘制匹配结果
         cv::Mat img_matches;
         cv::drawMatches(rectified_left, keypoints1, rectified_right, keypoints2, y_filtered_matches, img_matches);
-        cv::imshow("Image Matches", img_matches);
+        // cv::imshow("Image Matches", img_matches);
+
+        cv::Mat gray_left, gray_right;
+        cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
+
+        // 创建StereoBM对象
+        int numDisparities = 16; // 视差搜索范围的数量
+        int blockSize = 9;       // 块匹配窗口的大小
+        cv::Ptr<cv::StereoBM> stereo = cv::StereoBM::create(numDisparities, blockSize);
+
+        // 计算视差图
+        cv::Mat disparity;
+        stereo->compute(gray_left, gray_right, disparity);
+
+        // 归一化视差图以便显示
+        cv::Mat disparity_normalized;
+        cv::normalize(disparity, disparity_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
+
+        // 计算深度图
+        cv::Mat depth_map;
+        cv::reprojectImageTo3D(disparity, depth_map, Q, true);
+
+        cout<<Q<<endl;
+        
+        // 提取深度信息并归一化
+        cv::Mat depth_normalized;
+        cv::normalize(depth_map, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
+
+        
+        // 显示视差图
+        cv::imshow("Disparity", disparity_normalized);
+        // 显示深度图
+        cv::imshow("Depth Map", depth_map);
 
 
         if(waitKey(15) >= 0)
