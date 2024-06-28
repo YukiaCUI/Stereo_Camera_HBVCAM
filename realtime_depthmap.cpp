@@ -9,32 +9,6 @@
 using namespace std;
 using namespace cv;
 
-void draw_matches(const Mat &img1, const Mat &img2, const vector<pair<pair<float, float>, pair<float, float>>> &matches)
-{
-    // 将图像拼接成一张图
-    Mat img_matches;
-    hconcat(img1, img2, img_matches);
-    
-    for (auto &match : matches)
-    {
-        Point2f p1(match.first.first, match.first.second);
-        Point2f p2(match.second.first + img1.cols, match.second.second);
-        line(img_matches, p1, p2, Scalar(0, 0, 255), 2);
-    }
-    // resize
-    resize(img_matches, img_matches, Size(img_matches.cols / 2, img_matches.rows / 2));
-    // 显示匹配结果
-    imshow("matches", img_matches);
-    while (true)
-    {
-        if (waitKey(10) == 27)
-        {
-            destroyAllWindows();
-            break;
-        }
-    }
-}
-
 void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
 {
     disp.create(lpng.rows,lpng.cols,CV_16S);
