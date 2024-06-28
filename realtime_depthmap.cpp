@@ -2,12 +2,15 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
-#include <filesystem>
+
+#define Img_width 2560
+#define Img_height 720
+
 
 int main() {
+
     // 从文件加载标定结果
-    
-    cv::FileStorage fs("calibration/calib_param.yml", cv::FileStorage::READ);
+    cv::FileStorage fs("../calibration/calib_param.yml", cv::FileStorage::READ);
     if (!fs.isOpened()) {
         std::cerr << "Failed to open calibration file." << std::endl;
         return -1;
@@ -23,13 +26,36 @@ int main() {
 
     fs.release();
     
-    // 打开拼接的双目摄像头
-    cv::VideoCapture cap(0);
+    // 打开拼接的双目摄像头（根据自己的设备修改）
+    cv::VideoCapture cap(2);
 
     if (!cap.isOpened()) {
         std::cerr << "无法打开摄像头" << std::endl;
         return -1;
     }
+
+    // 图像大小
+    cv::Size imageSize(Img_width / 2, Img_height);  // 根据你的图像实际大小设置
+
+
+    /*
+    alpha 参数说明
+    alpha = -1：使用默认值，通常会保留所有有效像素，但可能会出现一些黑色边界。
+    alpha = 0：裁剪到最小矩形以去除所有不需要的像素，从而最大化视差图的有效区域。
+    alpha = 1：保留所有有效像素，视野最大化，但可能会包含更多的黑色边界。
+    */
+    // 立体校正
+    cv::Mat R1, R2, P1, P2, Q;
+    cv::stereoRectify(cameraMatrixL, distCoeffsL,
+                    cameraMatrixR, distCoeffsR,
+                    imageSize, R, T, R1, R2, P1, P2, Q,
+                    cv::CALIB_ZERO_DISPARITY, 0);  // alpha = 0
+
+    // std::cout << "R1: " << R1 << std::endl;
+    // std::cout << "R2: " << R2 << std::endl;
+    // std::cout << "P1: " << P1 << std::endl;
+    // std::cout << "P2: " << P2 << std::endl;
+    // std::cout << "Q: " << Q << std::endl;cv
 
     while (true) {
         cv::Mat frame;
@@ -40,32 +66,14 @@ int main() {
             break;
         }
 
-        // 根据实际分辨率调整
-        int width = frame.cols;
-        int height = frame.rows;
 
         // 拆分图像
-        cv::Mat left_frame = frame(cv::Rect(0, 0, width / 2, height));
-        cv::Mat right_frame = frame(cv::Rect(width / 2, 0, width / 2, height));
+        cv::Mat left_frame = frame(cv::Rect(0, 0, Img_width / 2, Img_height));
+        cv::Mat right_frame = frame(cv::Rect(Img_width / 2, 0, Img_width / 2, Img_height));
 
         // 显示左右两个图像
         cv::imshow("Left Camera", left_frame);
         cv::imshow("Right Camera", right_frame);
-
-        // 图像大小
-        cv::Size imageSize(width / 2, height);  // 根据你的图像实际大小设置
-
-        // 立体校正
-        cv::Mat R1, R2, P1, P2, Q;
-        cv::stereoRectify(cameraMatrixL, distCoeffsL,
-                        cameraMatrixR, distCoeffsR,
-                        imageSize, R, T, R1, R2, P1, P2, Q);
-
-        // std::cout << "R1: " << R1 << std::endl;
-        // std::cout << "R2: " << R2 << std::endl;
-        // std::cout << "P1: " << P1 << std::endl;
-        // std::cout << "P2: " << P2 << std::endl;
-        // std::cout << "Q: " << Q << std::endl;
 
         cv::Mat map1x, map1y, map2x, map2y;
         cv::initUndistortRectifyMap(cameraMatrixL, distCoeffsL, R1, P1, imageSize, CV_32FC1, map1x, map1y);
