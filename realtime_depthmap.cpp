@@ -184,8 +184,10 @@ int main() {
         // cv::imshow("Image Matches", img_matches);
 
         cv::Mat gray_left, gray_right;
-        cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
-        cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
+        // cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
+        // cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
+        gray_left = cv::imread("../calibration/cone/dispL.png");
+        gray_right = cv::imread("../calibration/cone/dispR.png");
 
         // 创建StereoBM对象
         int numDisparities = 16; // 视差搜索范围的数量
