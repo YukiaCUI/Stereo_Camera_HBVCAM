@@ -46,7 +46,7 @@ void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
     int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
 
     bm->setPreFilterType(CV_STEREO_BM_NORMALIZED_RESPONSE);//预处理滤波器类型
-    bm->setPreFilterSize(9);//预处理滤波器窗口大小
+    bm->setPreFilterSize(15);//预处理滤波器窗口大小
     bm->setPreFilterCap(31);//预处理滤波器截断值
     bm->setBlockSize(9);//SAD窗口大小
     bm->setMinDisparity(0);//最小视差
@@ -216,8 +216,8 @@ int main() {
         cv::Mat gray_left, gray_right, disparity;
         // cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
         // cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
-        gray_left = cv::imread("../calibration/cone/dispL.png");
-        gray_right = cv::imread("../calibration/cone/dispR.png");
+        gray_left = cv::imread("../calibration/cone/dispL.png", cv::IMREAD_GRAYSCALE);
+        gray_right = cv::imread("../calibration/cone/dispR.png", cv::IMREAD_GRAYSCALE);
 
         // // 创建StereoBM对象
         // int numDisparities = 16; // 视差搜索范围的数量
@@ -226,25 +226,14 @@ int main() {
 
         // // 计算视差图
         // stereo->compute(gray_left, gray_right, disparity);
+        
+        stereoBM(gray_left,gray_right,disparity);
 
         // // 归一化视差图以便显示
         // cv::Mat disparity_normalized;
         // cv::normalize(disparity, disparity_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
-
-        stereoBM(gray_left,gray_right,disparity);
-
-        // 计算深度图
-        cv::Mat depth_map;
-        cv::reprojectImageTo3D(disparity, depth_map, Q, true);
+        // imshow("disparity_normalized",disparity_normalized);
         
-        // 提取深度信息并归一化
-        cv::Mat depth_normalized;
-        cv::normalize(depth_map, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
-
-        // 显示视差图
-        cv::imshow("Disparity", disparity_normalized);
-        // 显示深度图
-        cv::imshow("Depth Map", depth_map);
 
         if(waitKey(15) >= 0)
         {
