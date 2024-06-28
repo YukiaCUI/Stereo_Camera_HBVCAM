@@ -35,6 +35,36 @@ void draw_matches(const Mat &img1, const Mat &img2, const vector<pair<pair<float
     }
 }
 
+void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
+{
+    disp.create(lpng.rows,lpng.cols,CV_16S);
+    cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
+    cv::Size imgSize = lpng.size();
+    cv::Rect roi1,roi2;
+    cv::Ptr<cv::StereoBM> bm = cv::StereoBM::create(16,9);
+
+    int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
+
+    bm->setPreFilterType(CV_STEREO_BM_NORMALIZED_RESPONSE);//预处理滤波器类型
+    bm->setPreFilterSize(9);//预处理滤波器窗口大小
+    bm->setPreFilterCap(31);//预处理滤波器截断值
+    bm->setBlockSize(9);//SAD窗口大小
+    bm->setMinDisparity(0);//最小视差
+    bm->setNumDisparities(nmDisparities);//视差搜索范围
+    bm->setTextureThreshold(10);//低纹理区域的判断阈值
+    bm->setUniquenessRatio(5);//视差唯一性百分比
+    bm->setSpeckleWindowSize(100);//检查视差连通区域变化度窗口大小
+    bm->setSpeckleRange(32);//视差变化阈值
+    bm->setROI1(roi1);
+    bm->setROI2(roi2);
+    bm->setDisp12MaxDiff(1);//左右视差图最大容许差异
+    bm->compute(lpng,rpng,disp);
+
+    disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));
+
+    cv::imshow("disp_img",disp1);
+}
+
 int main() {
 
     // 从文件加载标定结果
@@ -183,41 +213,38 @@ int main() {
         cv::drawMatches(rectified_left, keypoints1, rectified_right, keypoints2, y_filtered_matches, img_matches);
         // cv::imshow("Image Matches", img_matches);
 
-        cv::Mat gray_left, gray_right;
+        cv::Mat gray_left, gray_right, disparity;
         // cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
         // cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
         gray_left = cv::imread("../calibration/cone/dispL.png");
         gray_right = cv::imread("../calibration/cone/dispR.png");
 
-        // 创建StereoBM对象
-        int numDisparities = 16; // 视差搜索范围的数量
-        int blockSize = 9;       // 块匹配窗口的大小
-        cv::Ptr<cv::StereoBM> stereo = cv::StereoBM::create(numDisparities, blockSize);
+        // // 创建StereoBM对象
+        // int numDisparities = 16; // 视差搜索范围的数量
+        // int blockSize = 9;       // 块匹配窗口的大小
+        // cv::Ptr<cv::StereoBM> stereo = cv::StereoBM::create(numDisparities, blockSize);
 
-        // 计算视差图
-        cv::Mat disparity;
-        stereo->compute(gray_left, gray_right, disparity);
+        // // 计算视差图
+        // stereo->compute(gray_left, gray_right, disparity);
 
-        // 归一化视差图以便显示
-        cv::Mat disparity_normalized;
-        cv::normalize(disparity, disparity_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
+        // // 归一化视差图以便显示
+        // cv::Mat disparity_normalized;
+        // cv::normalize(disparity, disparity_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
+
+        stereoBM(gray_left,gray_right,disparity);
 
         // 计算深度图
         cv::Mat depth_map;
         cv::reprojectImageTo3D(disparity, depth_map, Q, true);
-
-        cout<<Q<<endl;
         
         // 提取深度信息并归一化
         cv::Mat depth_normalized;
         cv::normalize(depth_map, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
 
-        
         // 显示视差图
         cv::imshow("Disparity", disparity_normalized);
         // 显示深度图
         cv::imshow("Depth Map", depth_map);
-
 
         if(waitKey(15) >= 0)
         {
