@@ -4,18 +4,10 @@
 #include <thread>
 #include <filesystem>
 
-void create_directories() {
-    if (!std::filesystem::exists("left_frame")) {
-        std::filesystem::create_directory("left_frame");
-    }
-    if (!std::filesystem::exists("right_frame")) {
-        std::filesystem::create_directory("right_frame");
-    }
-}
-
 int main() {
     // 从文件加载标定结果
-    cv::FileStorage fs("./calibration/calib_param.yml", cv::FileStorage::READ);
+    
+    cv::FileStorage fs("calibration/calib_param.yml", cv::FileStorage::READ);
     if (!fs.isOpened()) {
         std::cerr << "Failed to open calibration file." << std::endl;
         return -1;
@@ -30,7 +22,7 @@ int main() {
     fs["T"] >> T;
 
     fs.release();
-
+    
     // 打开拼接的双目摄像头
     cv::VideoCapture cap(0);
 
@@ -38,8 +30,6 @@ int main() {
         std::cerr << "无法打开摄像头" << std::endl;
         return -1;
     }
-
-    create_directories();
 
     while (true) {
         cv::Mat frame;
@@ -89,6 +79,12 @@ int main() {
         // 显示校正后的图像
         cv::imshow("Rectified Left Image", rectified_left);
         cv::imshow("Rectified Right Image", rectified_right);
+       
+        if(cv::waitKey(15) >= 0)
+        {
+            break;
+        }
+
     }
 
     return 0;
