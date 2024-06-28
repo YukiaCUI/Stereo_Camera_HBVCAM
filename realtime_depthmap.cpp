@@ -108,7 +108,7 @@ int main() {
     fs.release();
     
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(0);
+    VideoCapture cap(2);
 
     if (!cap.isOpened()) {
         cerr << "无法打开摄像头" << endl;

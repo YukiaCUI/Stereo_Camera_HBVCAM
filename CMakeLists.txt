@@ -24,6 +24,10 @@ endif()
 # add_executable(realtime_depthmap realtime_depthmap.cpp)
 # target_link_libraries(realtime_depthmap ${OpenCV_LIBS})
 
-# 点云图
-add_executable(realtime_depthmap realtime_depthmap.cpp)
-target_link_libraries(realtime_depthmap ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)
+# 稀疏点云图
+# add_executable(3d_point_cloud 3d_point_cloud_sparse.cpp)
+# target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)
+
+# 稠密点云图
+add_executable(3d_point_cloud 3d_point_cloud_dense.cpp)
+target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)

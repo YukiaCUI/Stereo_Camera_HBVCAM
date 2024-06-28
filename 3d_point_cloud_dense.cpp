@@ -48,7 +48,7 @@ void showPointCloud(const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         d_cam.Activate(s_cam);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glPointSize(10);
+        glPointSize(5);
         glBegin(GL_POINTS);
         for (auto &p : pointcloud)
         {
@@ -60,6 +60,46 @@ void showPointCloud(const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     pangolin::DestroyWindow("Point Cloud Viewer");
+}
+
+void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
+{
+    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
+    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
+    cv::pyrDown(lpng, lpng);
+    cv::pyrDown(rpng, rpng);
+    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
+    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
+
+    disp.create(lpng.rows,lpng.cols,CV_16S);
+    cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
+    cv::Size imgSize = lpng.size();
+    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create();
+    cv::Mat disp_color;
+
+    int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
+    int pngChannels = lpng.channels();//获取左视图通道数
+    int winSize = 9;
+
+    sgbm->setPreFilterCap(31);//预处理滤波器截断值
+    sgbm->setBlockSize(winSize);//SAD窗口大小
+    sgbm->setP1(16*pngChannels*winSize*winSize);//控制视差平滑度第一参数
+    sgbm->setP2(32*pngChannels*winSize*winSize);//控制视差平滑度第二参数
+    sgbm->setMinDisparity(0);//最小视差
+    sgbm->setNumDisparities(nmDisparities);//视差搜索范围
+    sgbm->setUniquenessRatio(10);//视差唯一性百分比
+    sgbm->setSpeckleWindowSize(200);//检查视差连通区域变化度的窗口大小
+    sgbm->setSpeckleRange(32);//视差变化阈值
+    sgbm->setDisp12MaxDiff(1);//左右视差图最大容许差异
+    sgbm->setMode(cv::StereoSGBM::MODE_SGBM);//采用全尺寸双通道动态编程算法
+    sgbm->compute(lpng,rpng,disp);
+
+    disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));//转8位
+
+    cv::applyColorMap(disp1,disp_color,cv::COLORMAP_JET);//转彩色图
+
+    cv::imshow("SGBM_img",disp1);
+    cv::imshow("SGBM_color",disp_color);
 }
 
 int main()
@@ -189,43 +229,38 @@ int main()
         double cy = cameraMatrixL.at<double>(1, 2);
         double baseline = norm(T, cv::NORM_L2);
 
-        // 提取所有匹配点，成对存储
-        vector<cv::Point2f> left_cloud, right_cloud;
-        vector<pair<pair<float, float>, pair<float, float>>> rectify_matches;
-        for (int i = 0; i < (int)y_filtered_matches.size(); i++)
-        {
-            left_cloud.push_back(keypoints1[y_filtered_matches[i].queryIdx].pt);
-            right_cloud.push_back(keypoints2[y_filtered_matches[i].trainIdx].pt);
-            auto point_left = left_cloud[i];
-            auto point_right = right_cloud[i];
-            rectify_matches.push_back(make_pair(make_pair(point_left.x, point_left.y), make_pair(point_right.x, point_right.y)));
-        }
 
+        /*************************稠密点云*********************/
+        cv::Mat gray_left, gray_right, disparity;
+        // cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
+        // cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
+
+        gray_left = cv::imread("../calibration/cone/dispL.png", cv::IMREAD_GRAYSCALE);
+        gray_right = cv::imread("../calibration/cone/dispR.png", cv::IMREAD_GRAYSCALE);
+
+        stereoSGBM(gray_left,gray_right,disparity);
+        
         // 点云数组
-        vector<Vector4d, Eigen::aligned_allocator<Vector4d>> pointcloud;
-        // 遍历像素点，利用disparity和相机内参计算点深度信息，将点存入数组中
-        for (auto match : rectify_matches)
-        {
-            auto point_left = match.first;
-            auto point_right = match.second;
-            // 计算disparity
-            double disparity = point_left.first - point_right.first;
-            // 计算点深度信息
-            double depth = (fx * baseline) / disparity;
-            // 获取灰度信息
-            double gray_left = rectified_left.at<uchar>((int)point_left.second, (int)point_left.first) / 255.0;
-            // 将点存入数组中
-            Vector4d point = Vector4d(0, 0, 0, gray_left); // 前三维为xyz,第四维为颜色
-            double x = (point_left.first - cx) / fx;
-            double y = (point_left.second - cy) / fy;
-            point[0] = x * depth;
-            point[1] = y * depth;
-            point[2] = depth;
-            pointcloud.push_back(point);
-        }
+        vector<Vector4d, Eigen::aligned_allocator<Vector4d>> pointcloud_dense;
+        // 便利像素点，利用disparity和相机内参计算点深度信息，将点存入数组中
+        for (int v = 0; v < rectified_left.rows; v++)
+            for (int u = 0; u < rectified_left.cols; u++)
+            {
+                if (disparity.at<float>(v, u) <= 0.0 || disparity.at<float>(v, u) >= 96.0)
+                    continue;
+                Vector4d point(0, 0, 0, rectified_left.at<uchar>(v, u) / 255.0); // 前三维为xyz,第四维为颜色
+                // 根据双目模型计算 point 的位置
+                double x = (u - cx) / fx;
+                double y = (v - cy) / fy;
+                double depth = fx * baseline / (disparity.at<float>(v, u));
+                point[0] = x * depth;
+                point[1] = y * depth;
+                point[2] = depth;
+                pointcloud_dense.push_back(point);
+            }
 
         // 画出点云
-        showPointCloud(pointcloud);
+        showPointCloud(pointcloud_dense);
 
         if (waitKey(15) >= 0)
         {
