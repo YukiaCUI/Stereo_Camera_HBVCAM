@@ -12,3 +12,5 @@ _deps
 
 .vscode/
 build/
+calibration/left_frame/
+calibration/right_frame/
