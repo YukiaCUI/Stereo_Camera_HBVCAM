@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.5.1)
 project(StereoCamera)
 
 # Add libraries.
-find_package(OpenCV 3.4.16 REQUIRED)
+find_package(OpenCV 4.9.0 REQUIRED)
 
 if (NOT OpenCV_LIBS)
   set(OpenCV_LIBS "opencv::opencv")
