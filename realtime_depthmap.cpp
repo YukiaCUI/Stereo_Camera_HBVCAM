@@ -42,10 +42,11 @@ void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
     cv::Size imgSize = lpng.size();
     cv::Rect roi1,roi2;
     cv::Ptr<cv::StereoBM> bm = cv::StereoBM::create(16,9);
+    cv::Mat disp_color;
 
     int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
 
-    bm->setPreFilterType(CV_STEREO_BM_NORMALIZED_RESPONSE);//预处理滤波器类型
+    bm->setPreFilterType(0);//预处理滤波器类型
     bm->setPreFilterSize(15);//预处理滤波器窗口大小
     bm->setPreFilterCap(31);//预处理滤波器截断值
     bm->setBlockSize(9);//SAD窗口大小
@@ -62,7 +63,43 @@ void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
 
     disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));
 
-    cv::imshow("disp_img",disp1);
+    cv::applyColorMap(disp1,disp_color,cv::COLORMAP_JET);//转彩色图
+
+    cv::imshow("BM_img",disp1);
+    cv::imshow("BM_color",disp_color);
+}
+
+void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
+{
+    disp.create(lpng.rows,lpng.cols,CV_16S);
+    cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
+    cv::Size imgSize = lpng.size();
+    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create();
+    cv::Mat disp_color;
+
+    int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
+    int pngChannels = lpng.channels();//获取左视图通道数
+    int winSize = 5;
+
+    sgbm->setPreFilterCap(31);//预处理滤波器截断值
+    sgbm->setBlockSize(winSize);//SAD窗口大小
+    sgbm->setP1(8*pngChannels*winSize*winSize);//控制视差平滑度第一参数
+    sgbm->setP2(32*pngChannels*winSize*winSize);//控制视差平滑度第二参数
+    sgbm->setMinDisparity(0);//最小视差
+    sgbm->setNumDisparities(nmDisparities);//视差搜索范围
+    sgbm->setUniquenessRatio(5);//视差唯一性百分比
+    sgbm->setSpeckleWindowSize(100);//检查视差连通区域变化度的窗口大小
+    sgbm->setSpeckleRange(32);//视差变化阈值
+    sgbm->setDisp12MaxDiff(1);//左右视差图最大容许差异
+    sgbm->setMode(cv::StereoSGBM::MODE_SGBM);//采用全尺寸双通道动态编程算法
+    sgbm->compute(lpng,rpng,disp);
+
+    disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));//转8位
+
+    cv::applyColorMap(disp1,disp_color,cv::COLORMAP_JET);//转彩色图
+
+    cv::imshow("SGBM_img",disp1);
+    cv::imshow("SGBM_color",disp_color);
 }
 
 int main() {
@@ -85,7 +122,7 @@ int main() {
     fs.release();
     
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(2);
+    VideoCapture cap(0);
 
     if (!cap.isOpened()) {
         cerr << "无法打开摄像头" << endl;
@@ -127,7 +164,6 @@ int main() {
             break;
         }
 
-
         // 拆分图像
         Mat left_frame = frame(Rect(0, 0, Img_width / 2, Img_height));
         Mat right_frame = frame(Rect(Img_width / 2, 0, Img_width / 2, Img_height));
@@ -148,8 +184,6 @@ int main() {
         // // 显示校正后的图像
         // imshow("Rectified Left Image", rectified_left);
         // imshow("Rectified Right Image", rectified_right);
-        
-
 
         // SIFT 特征提取
         Ptr<SIFT> sift = SIFT::create();
@@ -228,6 +262,8 @@ int main() {
         // stereo->compute(gray_left, gray_right, disparity);
         
         stereoBM(gray_left,gray_right,disparity);
+        stereoSGBM(gray_left,gray_right,disparity);
+
 
         // // 归一化视差图以便显示
         // cv::Mat disparity_normalized;
