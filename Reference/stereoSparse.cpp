@@ -43,7 +43,7 @@ int main(int argc, char **argv)
 
   // 点云数组
   vector<Vector4d, Eigen::aligned_allocator<Vector4d>> pointcloud;
-  // 便利像素点，利用disparity和相机内参计算点深度信息，将点存入数组中
+  // 遍历像素点，利用disparity和相机内参计算点深度信息，将点存入数组中
   for (auto match : good_matches)
   {
     auto point_left = match.first;

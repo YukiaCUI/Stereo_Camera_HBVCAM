@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 project(STEREO_CAMERA)
 
 find_package(Pangolin REQUIRED)
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3.4.16 REQUIRED)
 
 
 include_directories(${Opencv_INCLUDE_DIRS})
