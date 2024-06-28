@@ -143,6 +143,8 @@ vector<pair<pair<float, float>, pair<float, float>>> get_matches(cv::Mat &img1, 
   vector<vector<uint32_t>> descriptor1, descriptor2;
   ComputeORB(img1, keypoints1, descriptor1);
   ComputeORB(img2, keypoints2, descriptor2);
+  
+  
   // 对左右图像特征点描述子进行匹配
   vector<cv::DMatch> matches;
   BfMatch(descriptor1, descriptor2, matches);

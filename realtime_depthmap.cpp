@@ -84,10 +84,38 @@ int main() {
         cv::remap(left_frame, rectified_left, map1x, map1y, cv::INTER_LINEAR);
         cv::remap(right_frame, rectified_right, map2x, map2y, cv::INTER_LINEAR);
 
-        // 显示校正后的图像
-        cv::imshow("Rectified Left Image", rectified_left);
-        cv::imshow("Rectified Right Image", rectified_right);
-       
+        // // 显示校正后的图像
+        // cv::imshow("Rectified Left Image", rectified_left);
+        // cv::imshow("Rectified Right Image", rectified_right);
+        
+
+
+        // SIFT 特征提取
+        cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
+        std::vector<cv::KeyPoint> keypoints1, keypoints2;
+        cv::Mat descriptors1, descriptors2;
+        cv::Mat SIFT_left, SIFT_right;
+
+        sift->detectAndCompute(rectified_left, cv::noArray(), keypoints1, descriptors1);
+        sift->detectAndCompute(rectified_right, cv::noArray(), keypoints2, descriptors2);
+
+        drawKeypoints(rectified_left, keypoints1, SIFT_left, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        drawKeypoints(rectified_right, keypoints2, SIFT_right, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+        //显示SIFT特征的图像
+        cv::imshow("SIFT L Camera", SIFT_left);
+        cv::imshow("SIFT R Camera", SIFT_right);
+
+        // // 检查提取的关键点和描述符数量
+        // std::cout << "Number of keypoints in left image: " << keypoints1.size() << std::endl;
+        // std::cout << "Number of keypoints in right image: " << keypoints2.size() << std::endl;
+        // std::cout << "Number of descriptors in left image: " << descriptors1.rows << std::endl;
+        // std::cout << "Number of descriptors in right image: " << descriptors2.rows << std::endl;
+
+        
+
+
+
         if(cv::waitKey(15) >= 0)
         {
             break;
