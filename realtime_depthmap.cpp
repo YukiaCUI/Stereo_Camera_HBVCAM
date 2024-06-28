@@ -122,7 +122,7 @@ int main() {
     fs.release();
     
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(0);
+    VideoCapture cap(2);
 
     if (!cap.isOpened()) {
         cerr << "无法打开摄像头" << endl;
@@ -248,10 +248,10 @@ int main() {
         // cv::imshow("Image Matches", img_matches);
 
         cv::Mat gray_left, gray_right, disparity;
-        // cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
-        // cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
-        gray_left = cv::imread("../calibration/cone/dispL.png", cv::IMREAD_GRAYSCALE);
-        gray_right = cv::imread("../calibration/cone/dispR.png", cv::IMREAD_GRAYSCALE);
+        cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
+        cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
+        // gray_left = cv::imread("../calibration/cone/dispL.png", cv::IMREAD_GRAYSCALE);
+        // gray_right = cv::imread("../calibration/cone/dispR.png", cv::IMREAD_GRAYSCALE);
 
         // // 创建StereoBM对象
         // int numDisparities = 16; // 视差搜索范围的数量
@@ -264,11 +264,29 @@ int main() {
         stereoBM(gray_left,gray_right,disparity);
         stereoSGBM(gray_left,gray_right,disparity);
 
+        double fx = P1.at<double>(0, 0);
+        double baseline = norm(T, cv::NORM_L2);
 
-        // // 归一化视差图以便显示
-        // cv::Mat disparity_normalized;
-        // cv::normalize(disparity, disparity_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
-        // imshow("disparity_normalized",disparity_normalized);
+        Mat depth(disparity.rows, disparity.cols, CV_16S);  //深度图
+        //视差图转深度图
+        for (int row = 0; row < depth.rows; row++)
+        {
+            for (int col = 0; col < depth.cols; col++)
+            {
+                short d = disparity.ptr<uchar>(row)[col];
+
+
+                if (d == 0)
+                    continue;
+
+                depth.ptr<short>(row)[col] = fx * baseline / d;
+            }
+        }
+        // 提取深度信息并归一化
+        cv::Mat depth_normalized;
+        cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
+        
+        imshow("depth_normalized",depth_normalized);
         
 
         if(waitKey(15) >= 0)
