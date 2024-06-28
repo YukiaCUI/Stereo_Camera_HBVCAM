@@ -62,6 +62,9 @@ int main() {
         return -1;
     }
 
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, Img_width);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, Img_height);
+
     // 图像大小
     Size imageSize(Img_width / 2, Img_height);  // 根据你的图像实际大小设置
 
@@ -79,11 +82,11 @@ int main() {
                     imageSize, R, -T, R1, R2, P1, P2, Q,
                     CALIB_ZERO_DISPARITY, 0);  // alpha = 0
 
-    cout << "R1: " << R1 << endl;
-    cout << "R2: " << R2 << endl;
-    cout << "P1: " << P1 << endl;
-    cout << "P2: " << P2 << endl;
-    cout << "Q: " << Q << endl;
+    // cout << "R1: " << R1 << endl;
+    // cout << "R2: " << R2 << endl;
+    // cout << "P1: " << P1 << endl;
+    // cout << "P2: " << P2 << endl;
+    // cout << "Q: " << Q << endl;
 
     while (true) {
         Mat frame;
