@@ -25,5 +25,5 @@ endif()
 # target_link_libraries(realtime_depthmap ${OpenCV_LIBS})
 
 # 点云图
-add_executable(pointcloud 3d_point_cloud.cpp)
-target_link_libraries(pointcloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)
+add_executable(realtime_depthmap realtime_depthmap.cpp)
+target_link_libraries(realtime_depthmap ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)

@@ -11,6 +11,11 @@ using namespace cv;
 
 void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
 {
+    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
+    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
+    cv::pyrDown(lpng, lpng);
+    cv::pyrDown(rpng, rpng);
+
     disp.create(lpng.rows,lpng.cols,CV_16S);
     cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
     cv::Size imgSize = lpng.size();
@@ -45,6 +50,13 @@ void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
 
 void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
 {
+    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
+    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
+    cv::pyrDown(lpng, lpng);
+    cv::pyrDown(rpng, rpng);
+    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
+    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
+
     disp.create(lpng.rows,lpng.cols,CV_16S);
     cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
     cv::Size imgSize = lpng.size();
@@ -53,16 +65,16 @@ void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
 
     int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
     int pngChannels = lpng.channels();//获取左视图通道数
-    int winSize = 5;
+    int winSize = 9;
 
     sgbm->setPreFilterCap(31);//预处理滤波器截断值
     sgbm->setBlockSize(winSize);//SAD窗口大小
-    sgbm->setP1(8*pngChannels*winSize*winSize);//控制视差平滑度第一参数
+    sgbm->setP1(16*pngChannels*winSize*winSize);//控制视差平滑度第一参数
     sgbm->setP2(32*pngChannels*winSize*winSize);//控制视差平滑度第二参数
     sgbm->setMinDisparity(0);//最小视差
     sgbm->setNumDisparities(nmDisparities);//视差搜索范围
-    sgbm->setUniquenessRatio(5);//视差唯一性百分比
-    sgbm->setSpeckleWindowSize(100);//检查视差连通区域变化度的窗口大小
+    sgbm->setUniquenessRatio(10);//视差唯一性百分比
+    sgbm->setSpeckleWindowSize(200);//检查视差连通区域变化度的窗口大小
     sgbm->setSpeckleRange(32);//视差变化阈值
     sgbm->setDisp12MaxDiff(1);//左右视差图最大容许差异
     sgbm->setMode(cv::StereoSGBM::MODE_SGBM);//采用全尺寸双通道动态编程算法
@@ -96,7 +108,7 @@ int main() {
     fs.release();
     
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(2);
+    VideoCapture cap(0);
 
     if (!cap.isOpened()) {
         cerr << "无法打开摄像头" << endl;
@@ -108,7 +120,6 @@ int main() {
 
     // 图像大小
     Size imageSize(Img_width / 2, Img_height);  // 根据你的图像实际大小设置
-
 
     /*
     alpha 参数说明
@@ -143,8 +154,8 @@ int main() {
         Mat right_frame = frame(Rect(Img_width / 2, 0, Img_width / 2, Img_height));
 
         // 显示左右两个图像
-        imshow("Left Camera", left_frame);
-        imshow("Right Camera", right_frame);
+        // imshow("Left Camera", left_frame);
+        // imshow("Right Camera", right_frame);
 
         Mat map1x, map1y, map2x, map2y;
         initUndistortRectifyMap(cameraMatrixL, distCoeffsL, R1, P1, imageSize, CV_32FC1, map1x, map1y);
@@ -235,9 +246,10 @@ int main() {
         // // 计算视差图
         // stereo->compute(gray_left, gray_right, disparity);
         
-        stereoBM(gray_left,gray_right,disparity);
+        // stereoBM(gray_left,gray_right,disparity);
         stereoSGBM(gray_left,gray_right,disparity);
 
+        /*
         double fx = P1.at<double>(0, 0);
         double baseline = norm(T, cv::NORM_L2);
 
@@ -248,20 +260,27 @@ int main() {
             for (int col = 0; col < depth.cols; col++)
             {
                 short d = disparity.ptr<uchar>(row)[col];
-
-
                 if (d == 0)
                     continue;
 
                 depth.ptr<short>(row)[col] = fx * baseline / d;
             }
         }
+        */
         // 提取深度信息并归一化
+        
+        cv::Mat depth_map_3D, disparity_float;
+        disparity.convertTo(disparity_float, CV_32F, 1.0/16.0);
+        cv::reprojectImageTo3D(disparity, depth_map_3D, Q, true);
+
+        std::vector<cv::Mat> channels(3);
+        cv::split(depth_map_3D, channels);
+        cv::Mat depth = channels[2];
+
         cv::Mat depth_normalized;
-        cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8U);
+        cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         
         imshow("depth_normalized",depth_normalized);
-        
 
         if(waitKey(15) >= 0)
         {
