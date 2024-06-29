@@ -48,7 +48,7 @@ void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
     cv::imshow("BM_color",disp_color);
 }
 
-void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
+void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp_8u)
 {
     cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
     cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
@@ -57,8 +57,8 @@ void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
     cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
     cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
 
-    disp.create(lpng.rows,lpng.cols,CV_16S);
-    cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
+    cv::Mat disp = cv::Mat(lpng.rows,lpng.cols,CV_16S);
+    disp_8u.create(lpng.rows,lpng.cols,CV_8UC1);
     cv::Size imgSize = lpng.size();
     cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create();
     cv::Mat disp_color;
@@ -80,11 +80,12 @@ void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
     sgbm->setMode(cv::StereoSGBM::MODE_SGBM);//采用全尺寸双通道动态编程算法
     sgbm->compute(lpng,rpng,disp);
 
-    disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));//转8位
+    disp.convertTo(disp_8u,CV_8U,255 / (nmDisparities*16.));//转8位
+    cv::GaussianBlur(disp_8u, disp_8u, cv::Size(5, 5), 1.5);
 
-    cv::applyColorMap(disp1,disp_color,cv::COLORMAP_JET);//转彩色图
+    cv::applyColorMap(disp_8u,disp_color,cv::COLORMAP_JET);//转彩色图
 
-    cv::imshow("SGBM_img",disp1);
+    cv::imshow("SGBM_img",disp_8u);
     cv::imshow("SGBM_color",disp_color);
 }
 
@@ -131,7 +132,7 @@ int main() {
     Mat R1, R2, P1, P2, Q;
     stereoRectify(cameraMatrixL, distCoeffsL,
                     cameraMatrixR, distCoeffsR,
-                    imageSize, R, -T, R1, R2, P1, P2, Q,
+                    imageSize, R, T, R1, R2, P1, P2, Q,
                     CALIB_ZERO_DISPARITY, 0);  // alpha = 0
 
     // cout << "R1: " << R1 << endl;
@@ -166,7 +167,7 @@ int main() {
         remap(left_frame, rectified_left, map1x, map1y, INTER_LINEAR);
         remap(right_frame, rectified_right, map2x, map2y, INTER_LINEAR);
 
-        // // 显示校正后的图像
+        // 显示校正后的图像
         // imshow("Rectified Left Image", rectified_left);
         // imshow("Rectified Right Image", rectified_right);
 
@@ -182,17 +183,16 @@ int main() {
         drawKeypoints(rectified_left, keypoints1, SIFT_left, Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         drawKeypoints(rectified_right, keypoints2, SIFT_right, Scalar::all(-1), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-        // //显示SIFT特征的图像
+        // 显示SIFT特征的图像
         // imshow("SIFT L Camera", SIFT_left);
         // imshow("SIFT R Camera", SIFT_right);
 
-        // // 检查提取的关键点和描述符数量
+        // 检查提取的关键点和描述符数量
         // cout << "Number of keypoints in left image: " << keypoints1.size() << endl;
         // cout << "Number of keypoints in right image: " << keypoints2.size() << endl;
         // cout << "Number of descriptors in left image: " << descriptors1.rows << endl;
         // cout << "Number of descriptors in right image: " << descriptors2.rows << endl;
 
-        
         // 特征点匹配
         BFMatcher matcher(NORM_L2);
         vector<vector<DMatch>> knn_matches;
@@ -237,62 +237,45 @@ int main() {
         cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
         // gray_left = cv::imread("../calibration/cone/dispL.png", cv::IMREAD_GRAYSCALE);
         // gray_right = cv::imread("../calibration/cone/dispR.png", cv::IMREAD_GRAYSCALE);
-
-        // // 创建StereoBM对象
-        // int numDisparities = 16; // 视差搜索范围的数量
-        // int blockSize = 9;       // 块匹配窗口的大小
-        // cv::Ptr<cv::StereoBM> stereo = cv::StereoBM::create(numDisparities, blockSize);
-
-        // // 计算视差图
-        // stereo->compute(gray_left, gray_right, disparity);
         
         // stereoBM(gray_left,gray_right,disparity);
         stereoSGBM(gray_left,gray_right,disparity);
 
-        /*
-        double fx = P1.at<double>(0, 0);
-        double baseline = norm(T, cv::NORM_L2);
+        // double fx = P1.at<double>(0, 0);
+        // double baseline = norm(T, cv::NORM_L2);
 
-        Mat depth(disparity.rows, disparity.cols, CV_16S);  //深度图
-        //视差图转深度图
-        for (int row = 0; row < depth.rows; row++)
-        {
-            for (int col = 0; col < depth.cols; col++)
-            {
-                short d = disparity.ptr<uchar>(row)[col];
-                if (d == 0)
-                    continue;
+        // Mat depth(disparity.rows, disparity.cols, CV_16S);  //深度图
+        // //视差图转深度图
+        // for (int row = 0; row < depth.rows; row++){
+        //     for (int col = 0; col < depth.cols; col++){
+        //         short d = disparity.ptr<uchar>(row)[col];
+        //         if (d == 0)
+        //             continue;
 
-                depth.ptr<short>(row)[col] = fx * baseline / d;
-            }
-        }
-        */
+        //         depth.ptr<short>(row)[col] = fx * baseline / d;
+        //     }
+        // }
+        // cout << "depth: " << depth.type() << endl;
         // 提取深度信息并归一化
         
-        cv::Mat depth_map_3D, disparity_8U;
-        disparity.convertTo(disparity_8U, CV_8U, 1.0/8.0);
-        cv::reprojectImageTo3D(disparity_8U, depth_map_3D, Q, true);
-
+        cv::Mat depth_map_3D;
+        cv::reprojectImageTo3D(disparity, depth_map_3D, Q, true); // 8UC1 -> 32FC3
         std::vector<cv::Mat> channels(3);
         cv::split(depth_map_3D, channels);
-        cv::Mat depth = channels[2];
+        cv::Mat depth = channels[2]; // 32FC3 -> 32FC1
 
         depth.setTo(0, depth < 0);
-        double actualMinVal, actualMaxVal;
-        cv::minMaxLoc(depth, &actualMinVal, &actualMaxVal);
-        std::cout << "Depth map actual min value: " << actualMinVal << " max value: " << actualMaxVal << std::endl;
-
+        depth.setTo(4000, depth > 4000);
 
         cv::Mat depth_normalized;
-        cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+        cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1); // 32FC3 -> 8UC1
         
-        imshow("depth_normalized",depth);
+        imshow("depth_normalized",depth_normalized);
 
-        if(waitKey(15) >= 0)
-        {
+        // A waitkey() is necessary for camera
+        if(waitKey(15) >= 0){
             break;
         }
-
     }
 
     return 0;
