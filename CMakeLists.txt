@@ -9,8 +9,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 查找库 
 # 2 versions of opencv for cyj and rxm
-# find_package(OpenCV 3.4.16 REQUIRED)
-find_package(OpenCV 4.9.0 REQUIRED)
+find_package(OpenCV 3.4.16 REQUIRED)
+# find_package(OpenCV 4.9.0 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Pangolin REQUIRED)
 
@@ -23,13 +23,13 @@ if (NOT OpenCV_LIBS)
 endif()
 
 # 深度图
-add_executable(realtime_depthmap realtime_depthmap.cpp)
-target_link_libraries(realtime_depthmap ${OpenCV_LIBS})
+# add_executable(realtime_depthmap realtime_depthmap.cpp)
+# target_link_libraries(realtime_depthmap ${OpenCV_LIBS})
 
 # 稀疏点云图
 # add_executable(3d_point_cloud 3d_point_cloud_sparse.cpp)
 # target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)
 
 # 稠密点云图
-# add_executable(3d_point_cloud 3d_point_cloud_dense.cpp)
-# target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)
+add_executable(3d_point_cloud 3d_point_cloud_dense.cpp)
+target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)

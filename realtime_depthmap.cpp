@@ -141,6 +141,8 @@ int main() {
     // cout << "P2: " << P2 << endl;
     // cout << "Q: " << Q << endl;
 
+    int photo_count = 0;
+
     while (true) {
         Mat frame;
         cap >> frame;  // 读取帧
@@ -155,8 +157,8 @@ int main() {
         Mat right_frame = frame(Rect(Img_width / 2, 0, Img_width / 2, Img_height));
 
         // 显示左右两个图像
-        // imshow("Left Camera", left_frame);
-        // imshow("Right Camera", right_frame);
+        imshow("Left Camera", left_frame);
+        imshow("Right Camera", right_frame);
 
         Mat map1x, map1y, map2x, map2y;
         initUndistortRectifyMap(cameraMatrixL, distCoeffsL, R1, P1, imageSize, CV_32FC1, map1x, map1y);
@@ -241,6 +243,9 @@ int main() {
         // stereoBM(gray_left,gray_right,disparity);
         stereoSGBM(gray_left,gray_right,disparity);
 
+        imwrite("gray_left.png",gray_left);
+        imwrite("gray_right.png",gray_right);
+        
         // double fx = P1.at<double>(0, 0);
         // double baseline = norm(T, cv::NORM_L2);
 
