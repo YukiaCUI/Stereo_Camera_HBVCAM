@@ -24,18 +24,7 @@ A project of stereo camera with HBVCAM-W202011HD V33
 
 ## Pointcloud
 
-<table>
-  <tr>
-    <td>
-      <img src="./Trails/Left_Camera.png" alt="Left Camera" width="400"/>
-      <p align="center">Left Frame</p>
-    </td>
-    <td>
-      <img src="./Trails/Right_Camera.png" alt="Right Camera" width="400"/>
-      <p align="center">Right Frame</p>
-    </td>
-  </tr>
-</table>
+![](./Trails/Image_Matches.png)
 
 ### sparse pointcloud
 ![sparse pointcloud](./Trails/稀疏点云图.png)
