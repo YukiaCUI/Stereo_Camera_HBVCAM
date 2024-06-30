@@ -1,10 +1,10 @@
 # Stereo_Camera_HBVCAM
 A project of stereo camera with HBVCAM-W202011HD V33
 
-## overview
+## Overview
 ![](./Trails/overview.png)
 
-## fuction
+## Fuction
 - get_frames: capture frames with camera
 - calibration：singel camera calibration & stereo camera calibration
 - realtime_depthmap.cpp: 1. feature point(by SIFT); 2. generate realtime disparity and depth map
@@ -19,10 +19,10 @@ A project of stereo camera with HBVCAM-W202011HD V33
 ### matches after filtering
 ![](./Trails/过滤后的匹配.png)
 
-## disparity and depth map
+## Disparity and Depth map
 ![](./Trails/深度图和视差图v2.png)
 
-## example of dense pointcloud
+## Pointcloud
 
 <table>
   <tr>
@@ -36,6 +36,9 @@ A project of stereo camera with HBVCAM-W202011HD V33
     </td>
   </tr>
 </table>
+
+### sparse pointcloud
+![sparse pointcloud](./Trails/稀疏点云图.png)
 
 ### dense pointcloud
 ![dense pointcloud](./Trails/Dense_pointcloud.gif)
