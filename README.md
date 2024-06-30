@@ -11,6 +11,17 @@ A project of stereo camera with HBVCAM-W202011HD V33
 - 3d_point_cloud_sparse.cpp: realtime sparse pointcloud
 - 3d_point_cloud_dense.cpp: realtime dense pointcloud
 
+## SIFT
+### original frame
+![](./Trails/SIFT特征点.png)
+### matches before filtering
+![](./Trails/goodmatches.png)
+### matches after filtering
+![](./Trails/过滤后的匹配.png)
+
+## disparity and depth map
+![](./Trails/深度图和视差图v2.png)
+
 ## example of dense pointcloud
 
 <table>
@@ -26,5 +37,5 @@ A project of stereo camera with HBVCAM-W202011HD V33
   </tr>
 </table>
 
+### dense pointcloud
 ![dense pointcloud](./Trails/Dense_pointcloud.gif)
-dense pointcloud
