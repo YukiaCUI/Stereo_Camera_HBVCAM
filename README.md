@@ -26,5 +26,5 @@ A project of stereo camera with HBVCAM-W202011HD V33
   </tr>
 </table>
 
-
 ![dense pointcloud](./Trails/Dense_pointcloud.gif)
+dense pointcloud
