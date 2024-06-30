@@ -160,6 +160,10 @@ int main() {
         imshow("Left Camera", left_frame);
         imshow("Right Camera", right_frame);
 
+        // 保存左右两个图像
+        imwrite("Left_Camera.png", left_frame);
+        imwrite("Right_Camera.png", right_frame);
+
         Mat map1x, map1y, map2x, map2y;
         initUndistortRectifyMap(cameraMatrixL, distCoeffsL, R1, P1, imageSize, CV_32FC1, map1x, map1y);
         initUndistortRectifyMap(cameraMatrixR, distCoeffsR, R2, P2, imageSize, CV_32FC1, map2x, map2y);

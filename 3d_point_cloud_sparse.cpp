@@ -1,9 +1,10 @@
 #include <opencv2/opencv.hpp>
+#include <vector>
+#include <string>
 #include <Eigen/Core>
 #include <pangolin/pangolin.h>
-#include <iostream>
-#include <chrono>
-#include <thread>
+#include <unistd.h>
+
 
 #define Img_width 2560
 #define Img_height 720
@@ -12,94 +13,45 @@ using namespace std;
 using namespace cv;
 using namespace Eigen;
 
-void showPointCloud(const std::vector<Eigen::Vector4d, Eigen::aligned_allocator<Eigen::Vector4d>> &pointcloud)
-{   
-    if (pointcloud.empty())
-    {
-        std::cerr << "Point cloud is empty!" << std::endl;
+void showPointCloud(const vector<Vector4d, Eigen::aligned_allocator<Vector4d>> &pointcloud) {
+
+    if (pointcloud.empty()) {
+        cerr << "Point cloud is empty!" << endl;
         return;
     }
 
-    
-    // 创建窗口
     pangolin::CreateWindowAndBind("Point Cloud Viewer", 1024, 768);
-    glewExperimental = GL_TRUE;
-    GLenum err = glewInit();
-    if (GLEW_OK != err)
-    {
-        std::cerr << "Error initializing GLEW: " << glewGetErrorString(err) << std::endl;
-        return;
-    }
-
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     pangolin::OpenGlRenderState s_cam(
-        pangolin::ProjectionMatrix(1024, 768, 500, 500, 512, 389, 0.1, 10000),
-        pangolin::ModelViewLookAt(0, -0.1, -1.8, 0, 0, 0, 0.0, -1.0, 0.0));
+        pangolin::ProjectionMatrix(1024, 768, 500, 500, 512, 389, 0.1, 1000),
+        pangolin::ModelViewLookAt(0, -0.1, -1.8, 0, 0, 0, 0.0, -1.0, 0.0)
+    );
 
     pangolin::View &d_cam = pangolin::CreateDisplay()
-                                .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
-                                .SetHandler(new pangolin::Handler3D(s_cam));
+        .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
+        .SetHandler(new pangolin::Handler3D(s_cam));
 
-    while (!pangolin::ShouldQuit())
-    {
+    while (pangolin::ShouldQuit() == false) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
         d_cam.Activate(s_cam);
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glPointSize(10);
+
+        glPointSize(2);
         glBegin(GL_POINTS);
-        for (auto &p : pointcloud)
-        {
+        for (auto &p: pointcloud) {
             glColor3f(p[3], p[3], p[3]);
             glVertex3d(p[0], p[1], p[2]);
         }
         glEnd();
         pangolin::FinishFrame();
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        usleep(5000);   // sleep 5 ms
     }
     pangolin::DestroyWindow("Point Cloud Viewer");
-}
 
-void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
-{
-    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
-    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
-    cv::pyrDown(lpng, lpng);
-    cv::pyrDown(rpng, rpng);
-    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
-    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
-
-    disp.create(lpng.rows,lpng.cols,CV_16S);
-    cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
-    cv::Size imgSize = lpng.size();
-    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create();
-    cv::Mat disp_color;
-
-    int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
-    int pngChannels = lpng.channels();//获取左视图通道数
-    int winSize = 9;
-
-    sgbm->setPreFilterCap(31);//预处理滤波器截断值
-    sgbm->setBlockSize(winSize);//SAD窗口大小
-    sgbm->setP1(16*pngChannels*winSize*winSize);//控制视差平滑度第一参数
-    sgbm->setP2(32*pngChannels*winSize*winSize);//控制视差平滑度第二参数
-    sgbm->setMinDisparity(0);//最小视差
-    sgbm->setNumDisparities(nmDisparities);//视差搜索范围
-    sgbm->setUniquenessRatio(10);//视差唯一性百分比
-    sgbm->setSpeckleWindowSize(200);//检查视差连通区域变化度的窗口大小
-    sgbm->setSpeckleRange(32);//视差变化阈值
-    sgbm->setDisp12MaxDiff(1);//左右视差图最大容许差异
-    sgbm->setMode(cv::StereoSGBM::MODE_SGBM);//采用全尺寸双通道动态编程算法
-    sgbm->compute(lpng,rpng,disp);
-
-    disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));//转8位
-
-    cv::applyColorMap(disp1,disp_color,cv::COLORMAP_JET);//转彩色图
-
-    cv::imshow("SGBM_img",disp1);
-    cv::imshow("SGBM_color",disp_color);
 }
 
 int main()
@@ -123,7 +75,7 @@ int main()
     fs.release();
 
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(2);
+    VideoCapture cap(0);
     if (!cap.isOpened())
     {
         cerr << "无法打开摄像头" << endl;
@@ -227,7 +179,7 @@ int main()
         double fy = cameraMatrixL.at<double>(1, 1);
         double cx = cameraMatrixL.at<double>(0, 2);
         double cy = cameraMatrixL.at<double>(1, 2);
-        double baseline = norm(T, cv::NORM_L2);
+        double baseline = norm(T, cv::NORM_L2)/1000.0;
 
         /*************************稀疏点云*********************/
         // 提取所有匹配点，成对存储
