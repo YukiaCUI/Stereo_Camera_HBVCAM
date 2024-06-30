@@ -15,6 +15,8 @@ void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
     cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
     cv::pyrDown(lpng, lpng);
     cv::pyrDown(rpng, rpng);
+    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
+    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
 
     disp.create(lpng.rows,lpng.cols,CV_16S);
     cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
@@ -161,8 +163,8 @@ int main() {
         imshow("Right Camera", right_frame);
 
         // 保存左右两个图像
-        imwrite("Left_Camera.png", left_frame);
-        imwrite("Right_Camera.png", right_frame);
+        // imwrite("Left_Camera.png", left_frame);
+        // imwrite("Right_Camera.png", right_frame);
 
         Mat map1x, map1y, map2x, map2y;
         initUndistortRectifyMap(cameraMatrixL, distCoeffsL, R1, P1, imageSize, CV_32FC1, map1x, map1y);
@@ -241,14 +243,13 @@ int main() {
         cv::Mat gray_left, gray_right, disparity;
         cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
         cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
-        // gray_left = cv::imread("../calibration/cone/dispL.png", cv::IMREAD_GRAYSCALE);
-        // gray_right = cv::imread("../calibration/cone/dispR.png", cv::IMREAD_GRAYSCALE);
+
         
         // stereoBM(gray_left,gray_right,disparity);
         stereoSGBM(gray_left,gray_right,disparity);
 
-        imwrite("gray_left.png",gray_left);
-        imwrite("gray_right.png",gray_right);
+        // imwrite("gray_left.png",gray_left);
+        // imwrite("gray_right.png",gray_right);
         
         // double fx = P1.at<double>(0, 0);
         // double baseline = norm(T, cv::NORM_L2);
