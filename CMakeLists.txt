@@ -23,13 +23,13 @@ if (NOT OpenCV_LIBS)
 endif()
 
 # 深度图
-add_executable(realtime_depthmap realtime_depthmap.cpp)
+add_executable(realtime_depthmap realtime_depthmap.cpp includes/disparity.hpp)
 target_link_libraries(realtime_depthmap ${OpenCV_LIBS})
 
 # 稀疏点云图
-# add_executable(3d_point_cloud 3d_point_cloud_sparse.cpp)
+# add_executable(3d_point_cloud 3d_point_cloud_sparse.cpp includes/show_pointcloud.hpp)
 # target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)
 
 # 稠密点云图
-# add_executable(3d_point_cloud 3d_point_cloud_dense.cpp)
+# add_executable(3d_point_cloud 3d_point_cloud_dense.cpp includes/show_pointcloud.hpp)
 # target_link_libraries(3d_point_cloud ${OpenCV_LIBS} ${Pangolin_LIBRARIES} Eigen3::Eigen)

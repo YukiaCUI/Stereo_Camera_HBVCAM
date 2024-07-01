@@ -2,94 +2,13 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include "./includes/disparity.hpp"
 
 #define Img_width 2560
 #define Img_height 720
 
 using namespace std;
 using namespace cv;
-
-void stereoBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp)
-{
-    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
-    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
-    cv::pyrDown(lpng, lpng);
-    cv::pyrDown(rpng, rpng);
-    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
-    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
-
-    disp.create(lpng.rows,lpng.cols,CV_16S);
-    cv::Mat disp1 = cv::Mat(lpng.rows,lpng.cols,CV_8UC1);
-    cv::Size imgSize = lpng.size();
-    cv::Rect roi1,roi2;
-    cv::Ptr<cv::StereoBM> bm = cv::StereoBM::create(16,9);
-    cv::Mat disp_color;
-
-    int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
-
-    bm->setPreFilterType(0);//预处理滤波器类型
-    bm->setPreFilterSize(15);//预处理滤波器窗口大小
-    bm->setPreFilterCap(31);//预处理滤波器截断值
-    bm->setBlockSize(9);//SAD窗口大小
-    bm->setMinDisparity(0);//最小视差
-    bm->setNumDisparities(nmDisparities);//视差搜索范围
-    bm->setTextureThreshold(10);//低纹理区域的判断阈值
-    bm->setUniquenessRatio(5);//视差唯一性百分比
-    bm->setSpeckleWindowSize(100);//检查视差连通区域变化度窗口大小
-    bm->setSpeckleRange(32);//视差变化阈值
-    bm->setROI1(roi1);
-    bm->setROI2(roi2);
-    bm->setDisp12MaxDiff(1);//左右视差图最大容许差异
-    bm->compute(lpng,rpng,disp);
-
-    disp.convertTo(disp1,CV_8U,255 / (nmDisparities*16.));
-
-    cv::applyColorMap(disp1,disp_color,cv::COLORMAP_JET);//转彩色图
-
-    cv::imshow("BM_img",disp1);
-    cv::imshow("BM_color",disp_color);
-}
-
-void stereoSGBM(cv::Mat lpng,cv::Mat rpng,cv::Mat &disp_8u)
-{
-    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
-    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
-    cv::pyrDown(lpng, lpng);
-    cv::pyrDown(rpng, rpng);
-    cv::GaussianBlur(lpng, lpng, cv::Size(5, 5), 1.5);
-    cv::GaussianBlur(rpng, rpng, cv::Size(5, 5), 1.5);
-
-    cv::Mat disp = cv::Mat(lpng.rows,lpng.cols,CV_16S);
-    disp_8u.create(lpng.rows,lpng.cols,CV_8UC1);
-    cv::Size imgSize = lpng.size();
-    cv::Ptr<cv::StereoSGBM> sgbm = cv::StereoSGBM::create();
-    cv::Mat disp_color;
-
-    int nmDisparities = ((imgSize.width / 8) + 15) & -16;//视差搜索范围
-    int pngChannels = lpng.channels();//获取左视图通道数
-    int winSize = 9;
-
-    sgbm->setPreFilterCap(31);//预处理滤波器截断值
-    sgbm->setBlockSize(winSize);//SAD窗口大小
-    sgbm->setP1(16*pngChannels*winSize*winSize);//控制视差平滑度第一参数
-    sgbm->setP2(32*pngChannels*winSize*winSize);//控制视差平滑度第二参数
-    sgbm->setMinDisparity(0);//最小视差
-    sgbm->setNumDisparities(nmDisparities);//视差搜索范围
-    sgbm->setUniquenessRatio(10);//视差唯一性百分比
-    sgbm->setSpeckleWindowSize(200);//检查视差连通区域变化度的窗口大小
-    sgbm->setSpeckleRange(32);//视差变化阈值
-    sgbm->setDisp12MaxDiff(1);//左右视差图最大容许差异
-    sgbm->setMode(cv::StereoSGBM::MODE_SGBM);//采用全尺寸双通道动态编程算法
-    sgbm->compute(lpng,rpng,disp);
-
-    disp.convertTo(disp_8u,CV_8U,255 / (nmDisparities*16.));//转8位
-    cv::GaussianBlur(disp_8u, disp_8u, cv::Size(5, 5), 1.5);
-
-    cv::applyColorMap(disp_8u,disp_color,cv::COLORMAP_JET);//转彩色图
-
-    cv::imshow("SGBM_img",disp_8u);
-    cv::imshow("SGBM_color",disp_color);
-}
 
 int main() {
 
@@ -111,15 +30,15 @@ int main() {
     fs.release();
     
     // 打开拼接的双目摄像头（根据自己的设备修改）
-    VideoCapture cap(0);
+    VideoCapture cap(2);
 
     if (!cap.isOpened()) {
         cerr << "无法打开摄像头" << endl;
         return -1;
     }
 
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, Img_width);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, Img_height);
+    cap.set(CAP_PROP_FRAME_WIDTH, Img_width);
+    cap.set(CAP_PROP_FRAME_HEIGHT, Img_height);
 
     // 图像大小
     Size imageSize(Img_width / 2, Img_height);  // 根据你的图像实际大小设置
@@ -225,34 +144,34 @@ int main() {
         }
 
         // 根据y坐标差值进行过滤
-        std::vector<cv::DMatch> y_filtered_matches;
+        std::vector<DMatch> y_filtered_matches;
         const float y_threshold = 10.0; // y坐标差值阈值，根据需要调整
         for (const auto& match : good_matches) {
-            cv::Point2f pt1 = keypoints1[match.queryIdx].pt;
-            cv::Point2f pt2 = keypoints2[match.trainIdx].pt;
+            Point2f pt1 = keypoints1[match.queryIdx].pt;
+            Point2f pt2 = keypoints2[match.trainIdx].pt;
             if (std::abs(pt1.y - pt2.y) < y_threshold) {
                 y_filtered_matches.push_back(match);
             }
         }
 
         // 绘制匹配结果
-        cv::Mat img_matches;
-        cv::drawMatches(rectified_left, keypoints1, rectified_right, keypoints2, y_filtered_matches, img_matches);
-        // cv::imshow("Image Matches", img_matches);
+        Mat img_matches;
+        drawMatches(rectified_left, keypoints1, rectified_right, keypoints2, y_filtered_matches, img_matches);
+        // imshow("Image Matches", img_matches);
 
-        cv::Mat gray_left, gray_right, disparity;
-        cv::cvtColor(rectified_left, gray_left, cv::COLOR_BGR2GRAY);
-        cv::cvtColor(rectified_right, gray_right, cv::COLOR_BGR2GRAY);
+        Mat gray_left, gray_right, disparity;
+        cvtColor(rectified_left, gray_left, COLOR_BGR2GRAY);
+        cvtColor(rectified_right, gray_right, COLOR_BGR2GRAY);
 
         
-        // stereoBM(gray_left,gray_right,disparity);
+        stereoBM(gray_left,gray_right,disparity);
         stereoSGBM(gray_left,gray_right,disparity);
 
         // imwrite("gray_left.png",gray_left);
         // imwrite("gray_right.png",gray_right);
         
         // double fx = P1.at<double>(0, 0);
-        // double baseline = norm(T, cv::NORM_L2);
+        // double baseline = norm(T, NORM_L2);
 
         // Mat depth(disparity.rows, disparity.cols, CV_16S);  //深度图
         // //视差图转深度图
@@ -268,17 +187,17 @@ int main() {
         // cout << "depth: " << depth.type() << endl;
         // 提取深度信息并归一化
         
-        cv::Mat depth_map_3D;
-        cv::reprojectImageTo3D(disparity, depth_map_3D, Q, true); // 8UC1 -> 32FC3
-        std::vector<cv::Mat> channels(3);
-        cv::split(depth_map_3D, channels);
-        cv::Mat depth = channels[2]; // 32FC3 -> 32FC1
+        Mat depth_map_3D;
+        reprojectImageTo3D(disparity, depth_map_3D, Q, true); // 8UC1 -> 32FC3
+        std::vector<Mat> channels(3);
+        split(depth_map_3D, channels);
+        Mat depth = channels[2]; // 32FC3 -> 32FC1
 
         depth.setTo(0, depth < 0);
         depth.setTo(4000, depth > 4000);
 
-        cv::Mat depth_normalized;
-        cv::normalize(depth, depth_normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1); // 32FC3 -> 8UC1
+        Mat depth_normalized;
+        normalize(depth, depth_normalized, 0, 255, NORM_MINMAX, CV_8UC1); // 32FC3 -> 8UC1
         
         imshow("depth_normalized",depth_normalized);
 

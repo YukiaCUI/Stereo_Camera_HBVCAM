@@ -4,55 +4,13 @@
 #include <Eigen/Core>
 #include <pangolin/pangolin.h>
 #include <unistd.h>
-
+#include "./includes/show_pointcloud.hpp"
 
 #define Img_width 2560
 #define Img_height 720
 
 using namespace std;
 using namespace cv;
-using namespace Eigen;
-
-void showPointCloud(const vector<Vector4d, Eigen::aligned_allocator<Vector4d>> &pointcloud) {
-
-    if (pointcloud.empty()) {
-        cerr << "Point cloud is empty!" << endl;
-        return;
-    }
-
-    pangolin::CreateWindowAndBind("Point Cloud Viewer", 1024, 768);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    pangolin::OpenGlRenderState s_cam(
-        pangolin::ProjectionMatrix(1024, 768, 500, 500, 512, 389, 0.1, 1000),
-        pangolin::ModelViewLookAt(0, -0.1, -1.8, 0, 0, 0, 0.0, -1.0, 0.0)
-    );
-
-    pangolin::View &d_cam = pangolin::CreateDisplay()
-        .SetBounds(0.0, 1.0, pangolin::Attach::Pix(175), 1.0, -1024.0f / 768.0f)
-        .SetHandler(new pangolin::Handler3D(s_cam));
-
-    while (pangolin::ShouldQuit() == false) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        d_cam.Activate(s_cam);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-        glPointSize(2);
-        glBegin(GL_POINTS);
-        for (auto &p: pointcloud) {
-            glColor3f(p[3], p[3], p[3]);
-            glVertex3d(p[0], p[1], p[2]);
-        }
-        glEnd();
-        pangolin::FinishFrame();
-        usleep(5000);   // sleep 5 ms
-    }
-    pangolin::DestroyWindow("Point Cloud Viewer");
-
-}
 
 int main()
 {
@@ -82,8 +40,8 @@ int main()
         return -1;
     }
 
-    cap.set(cv::CAP_PROP_FRAME_WIDTH, Img_width);
-    cap.set(cv::CAP_PROP_FRAME_HEIGHT, Img_height);
+    cap.set(CAP_PROP_FRAME_WIDTH, Img_width);
+    cap.set(CAP_PROP_FRAME_HEIGHT, Img_height);
 
     // 图像大小
     Size imageSize(Img_width / 2, Img_height); // 根据你的图像实际大小设置
@@ -115,8 +73,8 @@ int main()
         Mat right_frame = frame(Rect(Img_width / 2, 0, Img_width / 2, Img_height));
 
         // //测试图像
-        // Mat left_frame = cv::imread("../calibration/cone/imgL.png", cv::IMREAD_GRAYSCALE);
-        // Mat right_frame = cv::imread("../calibration/cone/imgR.png", cv::IMREAD_GRAYSCALE);
+        // Mat left_frame = imread("../calibration/cone/imgL.png", IMREAD_GRAYSCALE);
+        // Mat right_frame = imread("../calibration/cone/imgR.png", IMREAD_GRAYSCALE);
 
         // 应用映射生成校正后的图像
         Mat rectified_left, rectified_right;
@@ -158,12 +116,12 @@ int main()
         }
 
         // 根据y坐标差值进行过滤
-        std::vector<cv::DMatch> y_filtered_matches;
+        std::vector<DMatch> y_filtered_matches;
         const float y_threshold = 10.0; // y坐标差值阈值，根据需要调整
         for (const auto &match : good_matches)
         {
-            cv::Point2f pt1 = keypoints1[match.queryIdx].pt;
-            cv::Point2f pt2 = keypoints2[match.trainIdx].pt;
+            Point2f pt1 = keypoints1[match.queryIdx].pt;
+            Point2f pt2 = keypoints2[match.trainIdx].pt;
             if (std::abs(pt1.y - pt2.y) < y_threshold)
             {
                 y_filtered_matches.push_back(match);
@@ -171,19 +129,19 @@ int main()
         }
 
         // 绘制匹配结果
-        cv::Mat img_matches;
-        cv::drawMatches(rectified_left, keypoints1, rectified_right, keypoints2, y_filtered_matches, img_matches);
-        cv::imshow("Image Matches", img_matches);
+        Mat img_matches;
+        drawMatches(rectified_left, keypoints1, rectified_right, keypoints2, y_filtered_matches, img_matches);
+        imshow("Image Matches", img_matches);
 
         double fx = cameraMatrixL.at<double>(0, 0);
         double fy = cameraMatrixL.at<double>(1, 1);
         double cx = cameraMatrixL.at<double>(0, 2);
         double cy = cameraMatrixL.at<double>(1, 2);
-        double baseline = norm(T, cv::NORM_L2)/1000.0;
+        double baseline = norm(T, NORM_L2)/1000.0;
 
         /*************************稀疏点云*********************/
         // 提取所有匹配点，成对存储
-        vector<cv::Point2f> left_cloud, right_cloud;
+        vector<Point2f> left_cloud, right_cloud;
         vector<pair<pair<float, float>, pair<float, float>>> rectify_matches;
         for (int i = 0; i < (int)y_filtered_matches.size(); i++)
         {
